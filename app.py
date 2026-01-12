@@ -21,7 +21,7 @@ def carregar_dados():
 df = carregar_dados()
 
 # === TÍTULO E CABEÇALHO ===
-st.title("📊 Painel de Concorrência do Concurso")
+st.title("📊 Painel de Concorrência do Concurso- SES/SC")
 st.markdown("Visualize facilmente a relação **Candidato/Vaga** por Unidade e Cidade.")
 
 if df is not None:
@@ -103,3 +103,4 @@ else:
     st.error("Erro: O arquivo 'Relatorio_Final_Concorrencia.xlsx' não foi encontrado na pasta.")
 
     st.info("Certifique-se de ter rodado o script de geração antes de abrir o site.")
+
