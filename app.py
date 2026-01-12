@@ -88,7 +88,7 @@ if df is not None:
             """
             <div style="text-align: center; color: #666;">
                 <p style="font-size: 14px; margin-bottom: 5px;">
-                    🚀 <strong>Painel de Concorrência</strong> | Desenvolvido para fins informativos
+                    🚀 <strong>Painel de Concorrência</strong> | Desenvolvido para fins informativos - Por Alexandre Trieste
                 </p>
                 <p style="font-size: 12px; color: #888;">
                     Os dados foram processados automaticamente a partir dos arquivos PDF oficiais.<br>
@@ -101,4 +101,5 @@ if df is not None:
 
 else:
     st.error("Erro: O arquivo 'Relatorio_Final_Concorrencia.xlsx' não foi encontrado na pasta.")
+
     st.info("Certifique-se de ter rodado o script de geração antes de abrir o site.")
