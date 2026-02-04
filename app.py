@@ -16,7 +16,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🏆 Concurso SES/SC - Preliminar")
-st.markdown("Consulte a classificação oficial abaixo. Dados extraídos das colunas: **A, B, D, E e K**.")
+st.markdown("Consulte a classificação oficial abaixo.")
 
 # --- 3. CARREGAR DADOS (Estrito: Colunas A, B, D, E, K) ---
 @st.cache_data
@@ -70,4 +70,5 @@ if df is not None:
     )
 
 else:
+
     st.warning("Dica: Certifique-se de que o arquivo 'resultado_final_pdf.xlsx' foi gerado pelo script anterior e está nesta mesma pasta.")
