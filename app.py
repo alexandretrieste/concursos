@@ -1,106 +1,111 @@
 import streamlit as st
+import pdfplumber
 import pandas as pd
+from io import BytesIO
 
-# === CONFIGURAÇÃO DA PÁGINA ===
+# --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="Painel de Concorrência - SES/SC 2026",
-    page_icon="📊",
-    layout="wide"
+    page_title="Concurso SESC/SC - Preliminar",
+    layout="wide"  # Layout amplo para ver melhor a tabela
 )
 
-# === CARREGAMENTO DE DADOS ===
-@st.cache_data
-def carregar_dados():
-    arquivo = "Relatorio_Final_Concorrencia.xlsx"
+# --- 2. CONTADOR DE ACESSOS (Selo Gratuito) ---
+# Isso cria um contador visual que não zera quando o site reinicia
+st.markdown("""
+    <center>
+    <img src="https://visitcount.itsvg.in/api?id=seunome_classificador&label=Acessos&color=0&icon=5&pretty=true" />
+    </center>
+    """, unsafe_allow_html=True)
+
+st.title("🏆 Concurso SESC/SC - Preliminar")
+st.markdown("Filtre, pesquise e baixe o resultado organizado por **Cargo** e **Cidade**.")
+
+# --- 3. FUNÇÕES DE PROCESSAMENTO ---
+def converter_para_float(valor):
+    if pd.isna(valor): return 0.0
     try:
-        df = pd.read_excel(arquivo)
-        return df
-    except FileNotFoundError:
+        return float(str(valor).replace(',', '.'))
+    except:
+        return 0.0
+
+@st.cache_data # Isso faz o site ficar rápido (não recarrega o PDF toda hora)
+def processar_pdf(uploaded_file):
+    todas_linhas = []
+    
+    with pdfplumber.open(uploaded_file) as pdf:
+        for i, pagina in enumerate(pdf.pages):
+            tabela = pagina.extract_table()
+            if tabela:
+                if i == 0:
+                    todas_linhas.extend(tabela)
+                else:
+                    if tabela[0] == todas_linhas[0]:
+                        todas_linhas.extend(tabela[1:])
+                    else:
+                        todas_linhas.extend(tabela)
+
+    if not todas_linhas:
         return None
 
-df = carregar_dados()
+    # Cria DataFrame e limpa cabeçalhos
+    cabecalho = [str(c).replace('\n', ' ').strip().upper() for c in todas_linhas[0]]
+    df = pd.DataFrame(todas_linhas[1:], columns=cabecalho)
 
-# === TÍTULO E CABEÇALHO ===
-st.title("📊 Painel de Concorrência do Concurso- SES/SC")
-st.markdown("Visualize facilmente a relação **Candidato/Vaga** por Unidade e Cidade.")
+    # Identificar colunas automaticamente (mesmo que o nome mude um pouco)
+    col_nota = next((c for c in df.columns if 'NOTA' in c and 'OBJETIVA' in c), None)
+    col_cargo = next((c for c in df.columns if 'CARGO' in c), None)
+    col_cidade = next((c for c in df.columns if 'CIDADE' in c), None)
+    col_nome = next((c for c in df.columns if 'NOME' in c), None)
+    # A coluna de Inscrição geralmente é a segunda, mas vamos ignorar ela no final
 
-if df is not None:
-    # === BARRA LATERAL (FILTROS) ===
-    st.sidebar.header("Filtros")
-    
-    # Filtro 1: Unidade
-    todas_unidades = df["Unidade"].unique()
-    unidade_selecionada = st.sidebar.multiselect(
-        "Selecione a Unidade:",
-        options=todas_unidades,
-        default=todas_unidades
-    )
-    
-    # Filtro 2: Cidade (baseado na unidade selecionada)
-    df_filtrado_unidade = df[df["Unidade"].isin(unidade_selecionada)]
-    todas_cidades = df_filtrado_unidade["Cidade"].unique()
-    
-    cidade_selecionada = st.sidebar.multiselect(
-        "Selecione a Cidade:",
-        options=todas_cidades,
-        default=todas_cidades
-    )
-    
-    # Aplica filtros
-    df_final = df_filtrado_unidade[df_filtrado_unidade["Cidade"].isin(cidade_selecionada)]
+    if not col_nota or not col_cargo or not col_cidade:
+        return None
 
-    # === MÉTRICAS (KPIs) ===
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total de Vagas (Filtro)", int(df_final["Vagas (Ampla)"].sum()))
-    col2.metric("Total de Inscritos (Filtro)", int(df_final["Total Inscritos"].sum()))
+    # Converter notas e Classificar
+    df[col_nota] = df[col_nota].apply(converter_para_float)
+    df = df.sort_values(by=[col_cargo, col_cidade, col_nota], ascending=[True, True, False])
     
-    # Calcula média de concorrência segura (evita div por 0)
-    if not df_final.empty:
-        media_conc = df_final["Total Inscritos"].sum() / df_final["Vagas (Ampla)"].sum() if df_final["Vagas (Ampla)"].sum() > 0 else 0
-        col3.metric("Concorrência Média Geral", f"{media_conc:.2f} c/v")
+    # Criar Ranking (Reinicia a cada cidade/cargo)
+    df.insert(0, 'Classificação', df.groupby([col_cargo, col_cidade]).cumcount() + 1)
 
-    # === TABELA INTERATIVA ===
-    st.divider()
-    st.subheader("Detalhes dos Cargos")
+    # --- FILTRO DE COLUNAS (O SEGREDO) ---
+    # Selecionamos apenas as colunas que correspondem a A, B, D, E, K
+    # A=Classificação, B=Nome, D=Cargo, E=Cidade, K=Nota
+    colunas_finais = ['Classificação', col_nome, col_cargo, col_cidade, col_nota]
     
-    # Formatação visual (Dataframe com highlight na concorrência)
-    st.dataframe(
-        df_final.style.background_gradient(subset=["Concorrencia"], cmap="Reds"),
-        use_container_width=True,
-        column_config={
-            "Concorrencia": st.column_config.NumberColumn(
-                "Concorrência (Cand/Vaga)",
-                format="%.2f"
-            ),
-            "Vagas (Ampla)": st.column_config.NumberColumn(
-                "Vagas",
-                format="%d"
-            )
-        },
-        height=600
-    )
+    # Filtra o DataFrame para ter somente essas colunas
+    df_final = df[colunas_finais]
+    
+    # Renomeia para ficar bonito na tela
+    df_final.columns = ['Posição', 'Nome do Candidato', 'Cargo', 'Cidade da Vaga', 'Nota Final']
+    
+    return df_final
 
-    # === RODAPÉ (Inserido Aqui) ===
-    st.markdown("---")
-    col_f1, col_f2, col_f3 = st.columns([1, 4, 1])
-    with col_f2:
-        st.markdown(
-            """
-            <div style="text-align: center; color: #666;">
-                <p style="font-size: 14px; margin-bottom: 5px;">
-                    🚀 <strong>Painel de Concorrência</strong> | Desenvolvido para fins informativos - Por Alexandre Trieste
-                </p>
-                <p style="font-size: 12px; color: #888;">
-                    Os dados foram processados automaticamente a partir dos arquivos PDF oficiais.<br>
-                    Este projeto não possui vínculo com a banca organizadora.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True
+# --- 4. INTERFACE ---
+arquivo = st.file_uploader("📂 Arraste o PDF do resultado aqui", type="pdf")
+
+if arquivo:
+    with st.spinner('Lendo PDF e calculando posições...'):
+        df_resultado = processar_pdf(arquivo)
+
+    if df_resultado is not None:
+        st.success("✅ Classificação gerada com sucesso!")
+        
+        # --- TABELA INTERATIVA (COM PESQUISA) ---
+        # O st.dataframe permite ordenar clicar nas colunas e tem lupa de pesquisa (canto superior direito da tabela)
+        st.dataframe(df_resultado, use_container_width=True, hide_index=True)
+
+        # Botão de Download
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df_resultado.to_excel(writer, index=False)
+            
+        st.download_button(
+            label="📥 Baixar Planilha Excel (Limpa)",
+            data=buffer.getvalue(),
+            file_name="resultado_classificado.xlsx",
+            mime="application/vnd.ms-excel",
+            type="primary"
         )
-
-else:
-    st.error("Erro: O arquivo 'Relatorio_Final_Concorrencia.xlsx' não foi encontrado na pasta.")
-
-    st.info("Certifique-se de ter rodado o script de geração antes de abrir o site.")
-
+    else:
+        st.error("Não foi possível ler a tabela do PDF. Verifique se o formato está correto.")
