@@ -47,7 +47,7 @@ if df is not None:
         col_busca, col_info = st.columns([4, 1])
         
         with col_busca:
-            texto_busca = st.text_input("🔍 Pesquisar por Nome, Cargo ou Cidade:", placeholder="Ex: Motorista Florianópolis")
+            texto_busca = st.text_input("🔍 Pesquisar por Nome, Cargo ou Cidade:", placeholder="Ex: Motorista")
         
         with col_info:
             st.write("") # Espaçamento
@@ -72,3 +72,4 @@ if df is not None:
 else:
 
     st.warning("Dica: Certifique-se de que o arquivo 'resultado_final_pdf.xlsx' foi gerado pelo script anterior e está nesta mesma pasta.")
+
