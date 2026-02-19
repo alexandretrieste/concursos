@@ -10,7 +10,7 @@ st.set_page_config(
 st.title("🏆 Concurso SESC/SC - Preliminar")
 st.markdown("Filtre, pesquise e baixe o resultado organizado por **Cargo** e **Cidade**.")
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def carregar_dados():
     arquivo = 'resultado_final_pdf.xlsx'
     try:
