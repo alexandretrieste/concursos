@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(
-    page_title="Concurso SESC/SC - Preliminar",
+    page_title="Concurso SESC/SC - Preliminar - Ampla concorrência",
     layout="wide",
     page_icon="🏆"
 )
