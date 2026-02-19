@@ -7,7 +7,7 @@ st.set_page_config(
     page_icon="🏆"
 )
 
-st.title("🏆 Concurso SESC/SC - Preliminar")
+st.title("🏆 Concurso SESC/SC - Preliminar - Ampla concorrência")
 st.markdown("Filtre, pesquise e baixe o resultado organizado por **Cargo** e **Cidade**.")
 
 @st.cache_data(ttl=3600)
